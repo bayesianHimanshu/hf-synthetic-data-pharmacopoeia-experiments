@@ -1,0 +1,24 @@
+data:
+  figure_extraction:
+    vision_model: "HuggingFaceTB/SmolVLM-2B-Instruct"
+    batch_size: 8                                        
+
+training:
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 2    
+  quantization:
+    load_in_4bit: false             
+    compute_dtype: "bfloat16"
+
+wandb:
+  enabled: true
+  project: "pharma-slm"
+  run_name: null
+  tags: ["L40S", "lora-bf16", "pharmacopoeia"]
+
+telemetry:
+  service_name: "pharma-slm-l40s"
+  exporters:
+    - type: "console"
+    - type: "file"
+      path: "outputs/otel_traces.jsonl"
