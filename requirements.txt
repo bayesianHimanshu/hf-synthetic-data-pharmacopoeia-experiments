@@ -16,8 +16,8 @@ pymupdf4llm
 PyMuPDF                    
 Pillow                     
 
-# Synthetic data generation (GPU stage 1 — install separately on synth machine)
-# vllm
+# Synthetic data generation
+vllm
 
 # Training
 torch>=2.2
@@ -28,4 +28,5 @@ bitsandbytes
 accelerate
 matplotlib
 wandb
+num2words
 

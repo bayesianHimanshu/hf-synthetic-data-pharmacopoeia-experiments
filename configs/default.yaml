@@ -12,8 +12,8 @@ data:
   min_chunk_len: 100
   raw_hub_repo: "EulerianKnight/pharmacopeia-raw-chunks"
   figure_extraction:
-    enabled: true                 # set to true to run the two-pass vision pipeline
-    vision_model: "HuggingFaceTB/SmolVLM-Instruct"
+    enabled: true
+    vision_model: "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
     dpi: 150                       
     min_drawing_area: 5000.0       
     max_new_tokens: 256

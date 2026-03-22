@@ -1,11 +1,11 @@
 data:
   figure_extraction:
-    vision_model: "HuggingFaceTB/SmolVLM-2B-Instruct"
+    vision_model: "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
     batch_size: 8                                        
 
 training:
-  per_device_train_batch_size: 8
-  gradient_accumulation_steps: 2    
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4    
   quantization:
     load_in_4bit: false             
     compute_dtype: "bfloat16"

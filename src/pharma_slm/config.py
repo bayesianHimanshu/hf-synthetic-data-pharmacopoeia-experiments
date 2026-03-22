@@ -67,8 +67,14 @@ class TrainingConfig(BaseModel):
     lr_scheduler_type: str = "cosine"
     warmup_ratio: float = 0.1
     num_train_epochs: int = 3
+    eval_split: float = 0.1
+    eval_steps: int = 50
     logging_steps: int = 10
     save_strategy: str = "epoch"
+    save_steps: int = 50
+    load_best_model_at_end: bool = False
+    metric_for_best_model: str = "eval_loss"
+    gradient_checkpointing: bool = True
     bf16: bool = True
     fp16: bool = False
     lora: LoraConfig = Field(default_factory=LoraConfig)

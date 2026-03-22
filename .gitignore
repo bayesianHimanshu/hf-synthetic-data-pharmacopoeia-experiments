@@ -33,3 +33,7 @@ otel_traces.jsonl
 # IDEs
 .vscode/
 .idea/
+
+wandb
+
+outputs/data

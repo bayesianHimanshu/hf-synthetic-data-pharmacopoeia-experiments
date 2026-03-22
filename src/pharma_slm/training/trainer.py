@@ -122,6 +122,12 @@ def run_training(train_cfg: TrainingConfig, outputs_cfg: OutputsConfig, wandb_cf
             num_train_epochs=train_cfg.num_train_epochs,
             logging_steps=train_cfg.logging_steps,
             save_strategy=train_cfg.save_strategy,
+            save_steps=train_cfg.save_steps,
+            eval_strategy=train_cfg.save_strategy,  # must match save_strategy for load_best_model_at_end
+            eval_steps=train_cfg.eval_steps,
+            load_best_model_at_end=train_cfg.load_best_model_at_end,
+            metric_for_best_model=train_cfg.metric_for_best_model,
+            gradient_checkpointing=train_cfg.gradient_checkpointing,
             fp16=train_cfg.fp16,
             bf16=train_cfg.bf16,
             report_to="wandb" if (wandb_cfg and wandb_cfg.enabled) else "none",

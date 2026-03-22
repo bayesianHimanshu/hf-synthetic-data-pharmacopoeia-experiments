@@ -61,7 +61,6 @@ def main() -> None:
     result = run_inference(cfg.inference, text.strip())
 
     print("\n[SLM EXTRACTION OUTPUT]")
-    print("=" * 60)
     print(result)
 
 

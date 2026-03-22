@@ -50,9 +50,10 @@ def extract_and_chunk_pdf(cfg: DataConfig) -> list[str]:
             page_texts = _extract_with_figures(cfg)
         else:
             print(f"Extracting markdown from {cfg.pdf_filename} ...")
-            # Single-pass: plain text extraction
-            page_data = pymupdf4llm.to_markdown(cfg.pdf_filename, page_chunks=True)
-            page_texts = [p["text"] for p in page_data]
+            # Single-pass: full-document extraction (matches the original script behaviour)
+            full_markdown = pymupdf4llm.to_markdown(cfg.pdf_filename)
+            print(f"Extracted markdown: {len(full_markdown):,} characters.")
+            page_texts = [full_markdown]
 
         # Join pages, then do character-level chunking
         full_text = "\n\n".join(page_texts)
@@ -69,32 +70,44 @@ def extract_and_chunk_pdf(cfg: DataConfig) -> list[str]:
 
 
 def _extract_with_figures(cfg: DataConfig) -> list[str]:
-    """Two-pass extraction: text per page + vision LLM figure descriptions."""
+    """Two-pass extraction: full-doc text + vision LLM figure descriptions.
+
+    Uses the same full-document pymupdf4llm extraction as the non-figure path so
+    chunk counts stay consistent.  Figure descriptions are appended at the end of
+    the document text rather than inserted mid-document.
+    """
     # Lazy import — figure_extraction module only needed when enabled
     from pharma_slm.data.figure_extraction import detect_figure_pages, describe_figures
+    import fitz  # PyMuPDF — already a hard dependency via figure_extraction
 
     fig_cfg = cfg.figure_extraction
 
-    # Pass 1: text extraction, one dict per page
-    print(f"Extracting per-page markdown from {cfg.pdf_filename}.")
-    page_data = pymupdf4llm.to_markdown(cfg.pdf_filename, page_chunks=True)
-    print(f"Extracted {len(page_data)} pages.")
+    # Pass 1: full-document text extraction (same quality as the non-figure path)
+    print(f"Extracting full markdown from {cfg.pdf_filename}.")
+    full_markdown = pymupdf4llm.to_markdown(cfg.pdf_filename)
+
+    with fitz.open(cfg.pdf_filename) as _doc:
+        total_pages = len(_doc)
+
+    import os
+    file_size_mb = os.path.getsize(cfg.pdf_filename) / (1024 * 1024)
+    print(f"PDF has {total_pages} pages, file size {file_size_mb:.1f} MB.")
+    print(f"Extracted markdown: {len(full_markdown):,} characters ({len(full_markdown) // cfg.chunk_size} expected chunks before filtering).")
 
     # Pass 2: detect and describe figure pages
     figure_page_indices = detect_figure_pages(cfg.pdf_filename, fig_cfg)
     descriptions = describe_figures(cfg.pdf_filename, figure_page_indices, fig_cfg)
 
-    # Enrich each page's text with its figure description (if any)
-    enriched: list[str] = []
-    for page_idx, page_dict in enumerate(page_data):
-        text = page_dict["text"]
-        if page_idx in descriptions:
-            text += f"\n\n[FIGURE DESCRIPTION]: {descriptions[page_idx]}"
-        enriched.append(text)
+    # Append figure descriptions after the main text
+    if descriptions:
+        addendum = "\n\n".join(
+            f"[FIGURE DESCRIPTION - Page {idx + 1}]: {desc}"
+            for idx, desc in sorted(descriptions.items())
+        )
+        full_markdown += f"\n\n{addendum}"
 
-    enriched_count = len(descriptions)
-    print(f"Enriched {enriched_count}/{len(page_data)} pages with figure descriptions.")
-    return enriched
+    print(f"Enriched {len(descriptions)}/{total_pages} pages with figure descriptions.")
+    return [full_markdown]
 
 
 def save_chunks_jsonl(chunks: list[str], cfg: DataConfig) -> None:

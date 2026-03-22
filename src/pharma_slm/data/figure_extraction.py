@@ -38,7 +38,13 @@ FIGURE_DESCRIPTION_PROMPT = (
 
 
 def detect_figure_pages(pdf_path: str, cfg: FigureExtractionConfig) -> list[int]:
-    """Return page indices (0-based) that contain images or significant vector drawings."""
+    """Return page indices (0-based) that should be sent to the vision LLM.
+
+    For scanned PDFs every page is a raster image, so we send ALL pages that
+    carry any image to the vision model and let it decide whether a scientific
+    figure is present.  Vector-drawing detection uses a generous area threshold
+    to avoid triggering on page borders and table rules.
+    """
     doc = fitz.open(pdf_path)
     figure_pages: list[int] = []
 
@@ -46,22 +52,23 @@ def detect_figure_pages(pdf_path: str, cfg: FigureExtractionConfig) -> list[int]
         for page_idx in range(len(doc)):
             page = doc[page_idx]
 
-            # Raster images embedded in the page
+            # Any raster image on the page — includes full-page scans
             if page.get_images(full=False):
                 figure_pages.append(page_idx)
                 continue
 
-            # Vector drawings (chromatograms, apparatus, spectra drawn as PDF paths)
+            # Vector drawings large enough to be a real diagram (not borders/rules)
             for drawing in page.get_drawings():
                 rect = drawing.get("rect")
                 if rect and (rect.width * rect.height) >= cfg.min_drawing_area:
                     figure_pages.append(page_idx)
                     break
 
+        total_pages = len(doc)
         doc.close()
         span.set_attribute("figure_extraction.pages_with_figures", len(figure_pages))
 
-    print(f"Detected {len(figure_pages)} pages with figures out of {len(doc)} total pages.")
+    print(f"Detected {len(figure_pages)} pages with figures out of {total_pages} total pages.")
     return figure_pages
 
 
@@ -96,6 +103,8 @@ def describe_figures(
             device_map="auto",
         )
 
+        device = next(vision_model.parameters()).device
+
         doc = fitz.open(pdf_path)
         render_matrix = fitz.Matrix(cfg.dpi / 72, cfg.dpi / 72)
 
@@ -111,8 +120,8 @@ def describe_figures(
         prompt_text = processor.apply_chat_template(messages, add_generation_prompt=True)
 
         total = len(page_indices)
+        _debug_pages = 3
         for i, page_idx in enumerate(page_indices):
-            # Render the page to a PIL image
             pixmap = doc[page_idx].get_pixmap(matrix=render_matrix)
             pil_image = Image.open(io.BytesIO(pixmap.tobytes("png")))
 
@@ -120,18 +129,20 @@ def describe_figures(
                 text=prompt_text,
                 images=[pil_image],
                 return_tensors="pt",
-            ).to(vision_model.device)
+            ).to(device)
 
             output_ids = vision_model.generate(
                 **inputs,
                 max_new_tokens=cfg.max_new_tokens,
             )
-
-            # Decode only the newly generated tokens (skip the prompt)
             new_tokens = output_ids[0][inputs["input_ids"].shape[1]:]
             description = processor.decode(new_tokens, skip_special_tokens=True).strip()
 
-            if description and description != "NO_FIGURE":
+            if i < _debug_pages:
+                print(f"  [DEBUG] Page {page_idx+1} raw output: {description!r}")
+
+            is_no_figure = not description or "NO_FIGURE" in description.upper()
+            if not is_no_figure:
                 descriptions[page_idx] = description
                 print(f"  [{i+1}/{total}] Page {page_idx+1}: described ({len(description)} chars)")
             else:
@@ -139,7 +150,6 @@ def describe_figures(
 
         doc.close()
 
-        # Free GPU memory so the synthesis model can load cleanly afterwards
         del vision_model
         gc.collect()
         if torch.cuda.is_available():
