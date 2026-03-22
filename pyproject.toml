@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pharma_slm"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+    "pyyaml",
+    "opentelemetry-api",
+    "opentelemetry-sdk",
+    "opentelemetry-exporter-otlp-proto-grpc",
+    "datasets",
+    "huggingface_hub",
+    "pymupdf4llm",
+    "PyMuPDF",
+    "Pillow",
+]
+
+[project.optional-dependencies]
+synthesis = ["vllm"]
+figures = ["torch>=2.2", "transformers", "Pillow"]   # two-pass vision extraction
+train = [
+    "torch>=2.2",
+    "transformers",
+    "trl",
+    "peft",
+    "bitsandbytes",
+    "accelerate",
+    "matplotlib",
+    "wandb",
+]
+inference = ["torch>=2.2", "transformers", "peft"]
+all = [
+    "pharma_slm[synthesis,figures,train,inference]",
+]
+dev = ["pytest", "ruff", "mypy"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]

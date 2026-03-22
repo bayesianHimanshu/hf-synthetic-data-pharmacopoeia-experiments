@@ -1,4 +1,31 @@
-pymupdf4llm
+# Core
+pydantic>=2.0
+pyyaml
+
+# OpenTelemetry
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp-proto-grpc
+
+# Hugging Face ecosystem
 datasets
 huggingface_hub
-vllm
+
+# Data extraction
+pymupdf4llm
+PyMuPDF                    
+Pillow                     
+
+# Synthetic data generation (GPU stage 1 — install separately on synth machine)
+# vllm
+
+# Training
+torch>=2.2
+transformers
+trl
+peft
+bitsandbytes
+accelerate
+matplotlib
+wandb
+

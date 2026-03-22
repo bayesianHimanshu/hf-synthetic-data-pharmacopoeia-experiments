@@ -1,0 +1,12 @@
+wandb:
+  enabled: true
+  project: "pharma-slm"
+  run_name: null
+  tags: ["L4", "qlora", "pharmacopoeia"]
+
+telemetry:
+  service_name: "pharma-slm-lightning"
+  exporters:
+    - type: "console"
+    - type: "file"
+      path: "outputs/otel_traces.jsonl"
